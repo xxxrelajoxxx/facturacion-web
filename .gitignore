@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+Conexion_BigQuery.json
+.env

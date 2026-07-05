@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Viajes Pendientes - Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f1219; color: #e0e0e0; }
+        .bg-glow { position: fixed; top: -200px; right: -200px; width: 600px; height: 600px; background: radial-gradient(circle, rgba(0,123,255,.08), transparent 70%); pointer-events: none; z-index: 0; }
+        .bg-glow2 { position: fixed; bottom: -200px; left: -200px; width: 500px; height: 500px; background: radial-gradient(circle, rgba(0,230,118,.05), transparent 70%); pointer-events: none; z-index: 0; }
+        .app { position: relative; z-index: 1; max-width: 1440px; margin: 0 auto; padding: 24px; }
+
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+        .header h1 { font-size: 26px; font-weight: 700; background: linear-gradient(135deg, #4fc3f7, #00e676); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header .sub { font-size: 13px; color: #8892b0; }
+        .header .badge { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); border-radius: 20px; padding: 6px 16px; font-size: 12px; color: #8892b0; white-space: nowrap; }
+
+        .filtros { display: flex; gap: 10px; margin-bottom: 22px; flex-wrap: wrap; align-items: end; }
+        .filtros .f-group { display: flex; flex-direction: column; gap: 4px; }
+        .filtros .f-group label { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: #5a6a7e; }
+        .filtros select, .filtros button { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); border-radius: 8px; padding: 8px 14px; color: #e0e0e0; font-size: 12px; outline: none; cursor: pointer; transition: .2s; min-width: 130px; }
+        .filtros select:hover, .filtros button:hover { border-color: rgba(79,195,247,.4); }
+        .filtros select option { background: #1a1d2e; color: #e0e0e0; }
+        .filtros .btn-clear { background: transparent; border-color: rgba(255,82,82,.3); color: #ff5252; }
+        .filtros .btn-clear:hover { border-color: rgba(255,82,82,.6); }
+        .filtros .btn-apply { background: linear-gradient(135deg, #1a73e8, #0d47a1); border: none; color: #fff; font-weight: 600; }
+        .filtros .btn-apply:hover { opacity: .85; }
+        .filtros .ns-group { display: flex; gap: 4px; align-items: end; }
+        .filtros .ns-group button { min-width: auto; padding: 8px 16px; font-size: 11px; font-weight: 600; }
+        .ns-btn-on { color: #00e676 !important; border-color: rgba(0,230,118,.3) !important; }
+        .ns-btn-on.active { background: rgba(0,230,118,.15) !important; border-color: #00e676 !important; }
+        .ns-btn-off { color: #ff5252 !important; border-color: rgba(255,82,82,.3) !important; }
+        .ns-btn-off.active { background: rgba(255,82,82,.15) !important; border-color: #ff5252 !important; }
+        .filtros .f-count { font-size: 11px; color: #5a6a7e; padding: 8px 0; }
+
+        .kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-bottom: 24px; }
+        .kpi { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.06); border-radius: 14px; padding: 18px 16px; backdrop-filter: blur(8px); transition: .2s; }
+        .kpi:hover { border-color: rgba(79,195,247,.3); transform: translateY(-2px); }
+        .kpi .label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #8892b0; margin-bottom: 4px; }
+        .kpi .value { font-size: 28px; font-weight: 700; }
+        .kpi .sub { font-size: 11px; color: #5a6a7e; margin-top: 2px; }
+        .kpi.green .value { color: #00e676; }
+        .kpi.red .value { color: #ff5252; }
+        .kpi.blue .value { color: #4fc3f7; }
+        .kpi.orange .value { color: #ffab40; }
+        .kpi.purple .value { color: #b388ff; }
+        .kpi.cyan .value { color: #64ffda; }
+
+        .grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 24px; }
+        .grid-3col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; margin-bottom: 24px; }
+        .card { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.06); border-radius: 16px; padding: 20px; backdrop-filter: blur(8px); }
+        .card h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #8892b0; margin-bottom: 16px; }
+        .card canvas { max-height: 260px; max-width: 100%; }
+
+        .table-wrap { overflow-x: auto; }
+        .table-wrap table { width: 100%; font-size: 12px; border-collapse: collapse; }
+        .table-wrap th { text-align: left; padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,.08); color: #8892b0; font-weight: 500; white-space: nowrap; }
+        .table-wrap td { padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,.04); white-space: nowrap; }
+        .table-wrap tr:hover td { background: rgba(255,255,255,.03); }
+        .tag { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        .tag-on { background: rgba(0,230,118,.15); color: #00e676; }
+        .tag-off { background: rgba(255,82,82,.15); color: #ff5252; }
+        .tag-zona { background: rgba(79,195,247,.1); color: #4fc3f7; border-radius: 4px; padding: 1px 8px; font-size: 10px; font-weight: 600; }
+
+        .bar-progress { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
+        .bar-progress .bar-track { flex: 1; height: 6px; background: rgba(255,255,255,.06); border-radius: 3px; overflow: hidden; }
+        .bar-progress .bar-fill { height: 100%; border-radius: 3px; transition: width .6s ease; }
+        .bar-progress .bar-label { font-size: 11px; color: #8892b0; min-width: 60px; text-align: right; }
+
+        .timeline { position: relative; padding-left: 20px; }
+        .timeline::before { content: ''; position: absolute; left: 6px; top: 4px; bottom: 4px; width: 2px; background: rgba(255,255,255,.06); }
+        .tl-item { position: relative; margin-bottom: 12px; }
+        .tl-item::before { content: ''; position: absolute; left: -16px; top: 6px; width: 8px; height: 8px; border-radius: 50%; }
+        .tl-item.green::before { background: #00e676; box-shadow: 0 0 8px rgba(0,230,118,.3); }
+        .tl-item.red::before { background: #ff5252; box-shadow: 0 0 8px rgba(255,82,82,.3); }
+        .tl-item .tl-title { font-size: 13px; font-weight: 600; }
+        .tl-item .tl-meta { font-size: 11px; color: #5a6a7e; }
+
+        .center-stat { text-align: center; }
+        .center-stat .big { font-size: 52px; font-weight: 700; }
+        .center-stat .big.green { color: #00e676; }
+        .center-stat .big.red { color: #ff5252; }
+        .center-stat .sub { font-size: 12px; color: #5a6a7e; }
+
+        .charts-destroyed canvas { opacity: .3; transition: opacity .3s; }
+
+        @media (max-width: 900px) { .kpi-row { grid-template-columns: repeat(3,1fr); } .grid-2col, .grid-3col { grid-template-columns: 1fr; } .filtros { flex-direction: column; } .filtros select { min-width: 100%; } }
+        @media (max-width: 600px) { .kpi-row { grid-template-columns: repeat(2,1fr); } }
+    </style>
+</head>
+<body>
+<div class="bg-glow"></div>
+<div class="bg-glow2"></div>
+<div class="app">
+    <div class="header">
+        <div>
+            <h1>Viajes Pendientes</h1>
+            <div class="sub">Monitoreo de viajes por asignar a transporte · <span id="fecha-actual"></span></div>
+        </div>
+        <div class="badge" id="badge-update">cargando...</div>
+    </div>
+
+    <div class="filtros" id="filtros">
+        <div class="f-group">
+            <label>Planta</label>
+            <select id="filtro-planta"><option value="">Todas</option></select>
+        </div>
+        <div class="f-group">
+            <label>Destino Carga</label>
+            <select id="filtro-destino"><option value="">Todos</option></select>
+        </div>
+        <div class="f-group">
+            <label>Región</label>
+            <select id="filtro-zona"><option value="">Todas</option></select>
+        </div>
+        <div class="f-group">
+            <label>On Time / Off Time</label>
+            <div class="ns-group">
+                <button class="ns-btn-on" data-ns="ON_TIME" onclick="toggleNS(this)">ON TIME</button>
+                <button class="ns-btn-off" data-ns="OFF_TIME" onclick="toggleNS(this)">OFF TIME</button>
+            </div>
+        </div>
+        <div class="f-group">
+            <label>&nbsp;</label>
+            <button class="btn-apply" onclick="aplicarFiltros()">Aplicar</button>
+        </div>
+        <div class="f-group">
+            <label>&nbsp;</label>
+            <button class="btn-clear" onclick="limpiarFiltros()">Limpiar</button>
+        </div>
+        <div class="f-count" id="filtro-count"></div>
+    </div>
+
+    <div class="kpi-row" id="kpi-row"></div>
+
+    <div class="grid-2col">
+        <div class="card">
+            <h3>On-Time Rate</h3>
+            <div class="center-stat">
+                <div class="big" id="ot-rate">--</div>
+                <div class="sub">viajes a tiempo vs total</div>
+            </div>
+            <canvas id="chart-ot-donut" style="max-height:160px"></canvas>
+        </div>
+        <div class="card">
+            <h3>Distribución por Zona</h3>
+            <canvas id="chart-zona"></canvas>
+        </div>
+    </div>
+
+    <div class="grid-3col">
+        <div class="card">
+            <h3>Por Departamento</h3>
+            <div id="bar-deptos"></div>
+        </div>
+        <div class="card">
+            <h3>Días de Retraso</h3>
+            <canvas id="chart-retraso"></canvas>
+        </div>
+        <div class="card">
+            <h3>Próximos Vencimientos</h3>
+            <div id="timeline-container"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Listado de Viajes Pendientes</h3>
+        <div class="table-wrap" id="table-container"><div style="text-align:center;padding:30px;color:#5a6a7e">Cargando...</div></div>
+    </div>
+</div>
+
+<script>
+    let charts = {};
+    let nsActivo = '';
+
+    document.getElementById('fecha-actual').textContent = new Date().toLocaleDateString('es-PE', { year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' });
+
+    function getParams() {
+        const p = new URLSearchParams();
+        const planta = document.getElementById('filtro-planta').value;
+        const destino = document.getElementById('filtro-destino').value;
+        const zona = document.getElementById('filtro-zona').value;
+        if (planta) p.set('planta', planta);
+        if (destino) p.set('destino', destino);
+        if (zona) p.set('zona', zona);
+        if (nsActivo) p.set('ns', nsActivo);
+        return p.toString();
+    }
+
+    function toggleNS(btn) {
+        const grupo = btn.parentElement;
+        const activo = grupo.querySelector('.active');
+        if (activo === btn) {
+            btn.classList.remove('active');
+            nsActivo = '';
+        } else {
+            if (activo) activo.classList.remove('active');
+            btn.classList.add('active');
+            nsActivo = btn.dataset.ns;
+        }
+    }
+
+    function cargarFiltros() {
+        fetch('/api/viajes/filtros').then(r=>r.json()).then(d => {
+            ['plantas','destinos','zonas'].forEach(tipo => {
+                const sel = document.getElementById('filtro-' + (tipo === 'plantas' ? 'planta' : tipo === 'destinos' ? 'destino' : 'zona'));
+                d[tipo].forEach(v => {
+                    const opt = document.createElement('option');
+                    opt.value = v; opt.textContent = v;
+                    sel.appendChild(opt);
+                });
+            });
+        });
+    }
+
+    function limpiarFiltros() {
+        document.querySelectorAll('.filtros select').forEach(s => s.value = '');
+        document.querySelectorAll('.ns-group .active').forEach(b => b.classList.remove('active'));
+        nsActivo = '';
+        aplicarFiltros();
+    }
+
+    function aplicarFiltros() {
+        document.querySelectorAll('.card canvas').forEach(c => c.style.opacity = '.15');
+        document.getElementById('table-container').innerHTML = '<div style="text-align:center;padding:30px;color:#5a6a7e">Cargando...</div>';
+        Object.keys(charts).forEach(k => { if (charts[k]) { charts[k].destroy(); delete charts[k]; } });
+        cargarDashboard();
+    }
+
+    async function cargarDashboard() {
+        const params = getParams();
+        const suf = params ? '?' + params : '';
+
+        try {
+            const res = await fetch('/api/viajes/resumen' + suf).then(r=>r.json());
+            const kpiRow = document.getElementById('kpi-row');
+            kpiRow.innerHTML = [
+                { label:'Total Viajes', value:res.total, cls:'blue' },
+                { label:'On Time', value:res.on_time_ct, sub:`${res.on_time_pct}%`, cls:'green' },
+                { label:'Off Time', value:res.off_time_ct, sub:`${res.off_time_pct}%`, cls:'red' },
+                { label:'Cumplimiento Prom.', value:`${res.cumpl_prom}%`, cls:'cyan' },
+                { label:'Días Retraso Prom.', value:res.retraso_prom, cls:'orange' },
+                { label:'Con Placa Asignada', value:res.con_placa, sub:`${res.con_placa_pct}%`, cls:'purple' },
+            ].map(i => `<div class="kpi ${i.cls}"><div class="label">${i.label}</div><div class="value">${i.value}</div>${i.sub ? `<div class="sub">${i.sub}</div>` : ''}</div>`).join('');
+
+            document.getElementById('ot-rate').textContent = `${res.on_time_pct}%`;
+            document.getElementById('badge-update').textContent = `Actualizado: ${res.ultima_actualizacion}`;
+            document.getElementById('filtro-count').textContent = `${res.total} viajes encontrados`;
+
+            charts['ot-donut'] = new Chart(document.getElementById('chart-ot-donut'), {
+                type: 'doughnut',
+                data: { labels: ['On Time', 'Off Time'], datasets: [{ data: [res.on_time_ct, res.off_time_ct], backgroundColor: ['#00e676', '#ff5252'], borderWidth: 0 }] },
+                options: { responsive: true, maintainAspectRatio: true, cutout: '75%', plugins: { legend: { display: false } } }
+            });
+        } catch(e) { console.error(e); }
+
+        try {
+            const zona = await fetch('/api/viajes/zona' + suf).then(r=>r.json());
+            charts['zona'] = new Chart(document.getElementById('chart-zona'), {
+                type: 'doughnut',
+                data: { labels: zona.map(d=>d.zona), datasets: [{ data: zona.map(d=>d.cantidad), backgroundColor: ['#4fc3f7','#ffab40','#b388ff','#00e676','#ff5252'], borderWidth: 0 }] },
+                options: { responsive: true, plugins: { legend: { position:'right', labels: { color:'#8892b0', font:{size:11} } } } }
+            });
+        } catch(e) {}
+
+        try {
+            const deptos = await fetch('/api/viajes/departamentos' + suf).then(r=>r.json());
+            const max = Math.max(...deptos.map(d=>d.cantidad));
+            const div = document.getElementById('bar-deptos');
+            div.innerHTML = deptos.map(d => {
+                const pct = (d.cantidad / max * 100).toFixed(0);
+                const color = d.cumpl >= 100 ? '#00e676' : d.cumpl >= 90 ? '#ffab40' : '#ff5252';
+                return `<div class="bar-progress"><span style="min-width:90px;font-size:11px">${d.departamento}</span><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${color}"></div></div><span class="bar-label">${d.cantidad} · ${d.cumpl}%</span></div>`;
+            }).join('');
+        } catch(e) {}
+
+        try {
+            const ret = await fetch('/api/viajes/retraso' + suf).then(r=>r.json());
+            const colores = ['#00e676','#ffab40','#ff5252','#d50000'];
+            charts['retraso'] = new Chart(document.getElementById('chart-retraso'), {
+                type: 'bar',
+                data: { labels: ret.map(d=>d.rango), datasets: [{ label: 'Viajes', data: ret.map(d=>d.cantidad), backgroundColor: colores.slice(0,ret.length), borderRadius: 4 }] },
+                options: { responsive: true, scales: { y: { beginAtZero: true, grid: { color:'rgba(255,255,255,.04)' }, ticks: { color:'#5a6a7e' } }, x: { grid: { display:false }, ticks: { color:'#8892b0' } } }, plugins: { legend: { display:false } } }
+            });
+        } catch(e) {}
+
+        try {
+            const prox = await fetch('/api/viajes/proximos' + suf).then(r=>r.json());
+            const div = document.getElementById('timeline-container');
+            if (!prox.length) { div.innerHTML = '<div style="color:#5a6a7e;font-size:12px">Sin próximos vencimientos</div>'; return; }
+            div.innerHTML = '<div class="timeline">' + prox.map(d => `
+                <div class="tl-item ${d.NS === 'ON TIME' ? 'green' : 'red'}">
+                    <div class="tl-title">#${d.referencia}</div>
+                    <div class="tl-meta">${d.destino_carga || d.destino} · ${d.cliente_final || ''}</div>
+                    <div class="tl-meta">Carga: ${d.fecha_carga} · ${d.estado_viaje}</div>
+                </div>
+            `).join('') + '</div>';
+        } catch(e) {}
+
+        try {
+            const tabla = await fetch('/api/viajes/tabla' + suf).then(r=>r.json());
+            const div = document.getElementById('table-container');
+            if (!tabla.length) { div.innerHTML = '<div style="text-align:center;padding:30px;color:#5a6a7e">Sin datos</div>'; return; }
+            let html = '<table><thead><tr><th>Ref</th><th>Origen</th><th>Destino</th><th>Zona</th><th>Cliente</th><th>Placa</th><th>Compromiso</th><th>Carga</th><th>NS</th><th>Días Retr.</th><th>Cumpl.</th><th>Estado</th></tr></thead><tbody>';
+            tabla.forEach(r => {
+                const nsTag = r.NS === 'ON TIME' ? '<span class="tag tag-on">ON TIME</span>' : '<span class="tag tag-off">OFF TIME</span>';
+                const cumplPct = r.porcentaje_cumplimiento !== null ? r.porcentaje_cumplimiento.toFixed(0) : '-';
+                html += `<tr><td>${r.referencia}</td><td>${r.origen||'-'}</td><td>${r.destino||'-'}</td><td><span class="tag-zona">${r.zona||'-'}</span></td><td>${(r.cliente_final||'').substring(0,25)}</td><td>${r.placa||'-'}</td><td>${r.compromiso_de_carga||'-'}</td><td>${r.fecha_carga||'-'}</td><td>${nsTag}</td><td>${r.dias_retrazo??'-'}</td><td>${cumplPct}%</td><td>${r.estado_viaje||'-'}</td></tr>`;
+            });
+            html += '</tbody></table>';
+            div.innerHTML = html;
+        } catch(e) {}
+
+        document.querySelectorAll('.card canvas').forEach(c => c.style.opacity = '1');
+    }
+
+    cargarFiltros();
+    cargarDashboard();
+</script>
+</body>
+</html>

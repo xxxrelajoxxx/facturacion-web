@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facturación · Control de Gestión</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Segoe UI',system-ui,sans-serif; background:#0a0d14; color:#e0e0e0; }
+        .gl1 { position:fixed; top:-120px; right:-120px; width:500px; height:500px; background:radial-gradient(circle,rgba(0,200,83,.04),transparent 70%); pointer-events:none; z-index:0; }
+        .gl2 { position:fixed; bottom:-120px; left:-120px; width:500px; height:500px; background:radial-gradient(circle,rgba(41,121,255,.04),transparent 70%); pointer-events:none; z-index:0; }
+        .app { position:relative; z-index:1; max-width:1440px; margin:0 auto; padding:24px; }
+        .hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px; }
+        .hdr h1 { font-size:22px; font-weight:700; background:linear-gradient(135deg,#00e676,#2979ff); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        .hdr .sub { font-size:12px; color:#8892b0; }
+        .hdr .badge { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:20px; padding:5px 14px; font-size:11px; color:#8892b0; white-space:nowrap; }
+        .tabs { display:flex; gap:4px; margin-bottom:16px; border-bottom:1px solid rgba(255,255,255,.06); padding-bottom:8px; }
+        .tab { background:transparent; border:none; color:#5a6a7e; padding:8px 20px; font-size:13px; font-weight:600; cursor:pointer; border-radius:8px 8px 0 0; transition:.15s; }
+        .tab:hover { color:#e0e0e0; background:rgba(255,255,255,.03); }
+        .tab.active { color:#00e676; background:rgba(0,230,118,.06); }
+        .tab .ico { margin-right:6px; }
+        .page { display:none; }
+        .page.active { display:block; }
+        .filtros { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; align-items:end; }
+        .filtros .fg { display:flex; flex-direction:column; gap:3px; }
+        .filtros .fg label { font-size:9px; text-transform:uppercase; letter-spacing:.5px; color:#5a6a7e; white-space:nowrap; }
+        .filtros select, .filtros button { background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); border-radius:7px; padding:6px 10px; color:#e0e0e0; font-size:11px; outline:none; cursor:pointer; transition:.15s; }
+        .filtros select { min-width:105px; }
+        .filtros select option { background:#1a1d2e; }
+        .filtros select:hover, .filtros button:hover { border-color:rgba(79,195,247,.35); }
+        .filtros .btn-ap { background:linear-gradient(135deg,#1a73e8,#0d47a1); border:none; color:#fff; font-weight:600; padding:6px 18px; }
+        .filtros .btn-cl { background:transparent; border-color:rgba(255,82,82,.3); color:#ff5252; padding:6px 18px; }
+        .kpi-g { display:grid; gap:10px; margin-bottom:16px; }
+        .kpi-g.g9 { grid-template-columns:repeat(9,1fr); }
+        .kpi-g.g8 { grid-template-columns:repeat(8,1fr); }
+        .kpi-g.g6 { grid-template-columns:repeat(6,1fr); }
+        .kpi { background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.06); border-radius:12px; padding:14px 12px; transition:.15s; }
+        .kpi:hover { border-color:rgba(0,230,118,.2); transform:translateY(-1px); }
+        .kpi .lbl { font-size:9px; text-transform:uppercase; letter-spacing:.8px; color:#5a6a7e; margin-bottom:2px; }
+        .kpi .val { font-size:20px; font-weight:700; }
+        .kpi .sub { font-size:10px; color:#5a6a7e; margin-top:1px; }
+        .kpi.grn .val { color:#00e676; }
+        .kpi.red .val { color:#ff5252; }
+        .kpi.blu .val { color:#4fc3f7; }
+        .kpi.orn .val { color:#ffab40; }
+        .kpi.prp .val { color:#b388ff; }
+        .kpi.cyn .val { color:#64ffda; }
+        .kpi.pnk .val { color:#f48fb1; }
+        .kpi.ylw .val { color:#ffd740; }
+        .g2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px; }
+        .g3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-bottom:16px; }
+        .g4 { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:14px; margin-bottom:16px; }
+        .g5 { display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1fr; gap:14px; margin-bottom:16px; }
+        .card { background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.06); border-radius:14px; padding:18px; }
+        .card h3 { font-size:11px; text-transform:uppercase; letter-spacing:.8px; color:#8892b0; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+        .card h3 .sml { font-size:10px; font-weight:400; color:#5a6a7e; }
+        .card canvas { max-height:240px; max-width:100%; }
+        .mt { overflow-x:auto; }
+        .mt table { width:100%; font-size:11px; border-collapse:collapse; }
+        .mt th { text-align:left; padding:7px 10px; border-bottom:1px solid rgba(255,255,255,.06); color:#5a6a7e; font-weight:500; white-space:nowrap; }
+        .mt td { padding:5px 10px; border-bottom:1px solid rgba(255,255,255,.03); white-space:nowrap; }
+        .mt tr:hover td { background:rgba(255,255,255,.02); }
+        .mt .mono { font-family:'JetBrains Mono','Cascadia Code',monospace; font-size:11px; }
+        .mt .r { text-align:right; }
+        .bar-li .bi { display:flex; align-items:center; gap:8px; margin:4px 0; }
+        .bar-li .bt { flex:1; height:5px; background:rgba(255,255,255,.04); border-radius:3px; overflow:hidden; }
+        .bar-li .bf { height:100%; border-radius:3px; transition:width .5s ease; }
+        .bar-li .bl { font-size:10px; color:#8892b0; min-width:70px; text-align:right; }
+        .bar-li .bn { font-size:10px; min-width:100px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .tag { display:inline-block; padding:1px 8px; border-radius:8px; font-size:9px; font-weight:600; }
+        .tag-acp { background:rgba(0,230,118,.12); color:#00e676; }
+        .tag-pen { background:rgba(255,171,64,.12); color:#ffab40; }
+        .tag-man { background:rgba(79,195,247,.12); color:#4fc3f7; }
+        .tag-anl { background:rgba(255,82,82,.12); color:#ff5252; }
+        .tag-cbr { background:rgba(0,230,118,.15); color:#00e676; }
+        .tag-flt { background:rgba(100,255,218,.12); color:#64ffda; }
+        .tag-nflt { background:rgba(255,82,82,.1); color:#ff5252; }
+        .tag-reg { background:rgba(79,195,247,.12); color:#4fc3f7; }
+        .big-num { text-align:center; padding:8px 0; }
+        .big-num .b { font-size:40px; font-weight:700; }
+        .big-num .b.grn { color:#00e676; }
+        .big-num .b.red { color:#ff5252; }
+        .big-num .b.orn { color:#ffab40; }
+        .big-num .b.blu { color:#4fc3f7; }
+        .big-num .s { font-size:11px; color:#5a6a7e; margin-top:2px; }
+        .mini-card { background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.05); border-radius:10px; padding:14px; }
+        .mini-card .mc-lbl { font-size:9px; text-transform:uppercase; color:#5a6a7e; letter-spacing:.5px; }
+        .mini-card .mc-val { font-size:18px; font-weight:700; margin-top:2px; }
+        .mini-card .mc-sub { font-size:10px; color:#5a6a7e; }
+        .flash { animation: flash 1.5s ease-in-out; }
+        @keyframes flash { 0%,100%{opacity:1} 50%{opacity:.4} }
+        .cp { display:flex; align-items:center; gap:8px; font-size:11px; }
+        .cp .dot { width:8px; height:8px; border-radius:50%; display:inline-block; }
+        @media(max-width:1100px) { .kpi-g.g9,.kpi-g.g8 { grid-template-columns:repeat(4,1fr); } .kpi-g.g6 { grid-template-columns:repeat(3,1fr); } .g2,.g3,.g4,.g5 { grid-template-columns:1fr; } }
+        @media(max-width:600px) { .kpi-g.g9,.kpi-g.g8,.kpi-g.g6 { grid-template-columns:repeat(2,1fr); } }
+    </style>
+</head>
+<body>
+<div class="gl1"></div><div class="gl2"></div>
+<div class="app">
+    <div class="hdr">
+        <div>
+            <h1>Facturación · Control de Gestión</h1>
+            <div class="sub">Operaciones, cobranza y validación · <span id="fecha-actual"></span></div>
+        </div>
+        <div class="badge" id="badge-status">cargando...</div>
+    </div>
+
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('operativo')"><span class="ico">⚙</span>Operativo</button>
+        <button class="tab" onclick="switchTab('comercial')"><span class="ico">📊</span>Comercial</button>
+    </div>
+
+    <div class="filtros" id="filtros">
+        <div class="fg"><label>Compañía</label><select id="f-compania"><option value="">Todas</option></select></div>
+        <div class="fg"><label>Estado Contable</label><select id="f-ec"><option value="">Todos</option></select></div>
+        <div class="fg"><label>Est. Flete</label><select id="f-ef"><option value="">Todos</option></select></div>
+        <div class="fg"><label>FLT</label><select id="f-flt"><option value="">Todos</option></select></div>
+        <div class="fg"><label>Status Crisar</label><select id="f-sc"><option value="">Todos</option></select></div>
+        <div class="fg"><label>Tipo Fact.</label><select id="f-tf"><option value="">Todos</option></select></div>
+        <div class="fg"><label>Contab. AJE</label><select id="f-scaje"><option value="">Todos</option></select></div>
+        <div class="fg"><label>Envío Fact.</label><select id="f-env-fact"><option value="">Todos</option></select></div>
+        <div class="fg"><label>Aprobación</label><select id="f-aprob"><option value="">Todos</option></select></div>
+        <div class="fg"><label>Mes Desde</label><select id="f-mes-d"><option value="">--</option></select></div>
+        <div class="fg"><label>Mes Hasta</label><select id="f-mes-h"><option value="">--</option></select></div>
+        <div class="fg"><label>&nbsp;</label><button class="btn-ap" onclick="aplicar()">Aplicar</button></div>
+        <div class="fg"><label>&nbsp;</label><button class="btn-cl" onclick="limpiar()">Limpiar</button></div>
+    </div>
+
+    <div id="page-operativo" class="page active">
+        <div style="display:flex;align-items:center;gap:20px;margin-bottom:16px">
+            <img src="/static/LOGO-AJE.png" style="height:64px;width:auto;flex-shrink:0;align-self:center;margin-left:6px">
+            <div class="kpi-g g8" id="kpi-op" style="flex:1;margin:0"></div>
+        </div>
+        <div class="g5">
+            <div class="card"><h3>Estado Contable</h3><canvas id="op-contable"></canvas></div>
+            <div class="card"><h3>FLT</h3><canvas id="op-flt"></canvas></div>
+            <div class="card"><h3>Status Crisar (Cobranza)</h3><canvas id="op-crisar"></canvas></div>
+            <div class="card"><h3>Estado Envío Factura</h3><div id="op-envio" class="bar-li"></div></div>
+            <div class="card"><h3>Estado Flete</h3><canvas id="op-flete"></canvas></div>
+        </div>
+        <div class="g4">
+            <div class="card"><h3>Tipo Facturación</h3><canvas id="op-tipo-fact"></canvas></div>
+            <div class="card"><h3>Aprobación</h3><canvas id="op-aprob"></canvas></div>
+            <div class="card"><h3>Conciliación</h3><canvas id="op-conciliacion"></canvas></div>
+            <div class="card"><h3>Top Pendientes de Facturar</h3><div id="op-pendientes" class="bar-li"></div></div>
+        </div>
+        <div class="card">
+            <h3>Detalle de Facturación</h3>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                <div style="font-size:11px;color:#5a6a7e" id="op-tabla-info"></div>
+                <div style="display:flex;gap:6px;align-items:center">
+                    <button onclick="exportarExcel()" style="background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.25);border-radius:6px;color:#00e676;padding:4px 12px;font-size:11px;cursor:pointer;font-weight:600">⬇ Excel</button>
+                    <button class="pg-btn" id="pg-prev" onclick="cambiarPag(-1)" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:6px;color:#e0e0e0;padding:4px 12px;font-size:11px;cursor:pointer">◀ Anterior</button>
+                    <span style="font-size:11px;color:#8892b0" id="pg-info">Pág. 1</span>
+                    <button class="pg-btn" id="pg-next" onclick="cambiarPag(1)" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:6px;color:#e0e0e0;padding:4px 12px;font-size:11px;cursor:pointer">Siguiente ▶</button>
+                </div>
+            </div>
+            <div class="mt" id="op-tabla"><div style="text-align:center;padding:24px;color:#5a6a7e">Cargando...</div></div>
+        </div>
+    </div>
+
+    <div id="page-comercial" class="page">
+        <div style="display:flex;align-items:center;gap:20px;margin-bottom:16px">
+            <img src="/static/LOGO-AJE.png" style="height:64px;width:auto;flex-shrink:0;align-self:center;margin-left:6px">
+            <div class="kpi-g g8" id="kpi-com" style="flex:1;margin:0"></div>
+        </div>
+        <div class="g2">
+            <div class="card">
+                <h3>Evolución Mensual</h3>
+                <div class="big-num" id="com-pct"><div class="b grn">--</div><div class="s">% facturado último mes</div></div>
+                <canvas id="com-tendencia"></canvas>
+            </div>
+            <div class="card">
+                <h3>Ranking por Compañía</h3>
+                <canvas id="com-ranking"></canvas>
+            </div>
+        </div>
+        <div class="g3">
+            <div class="card"><h3>Status Contabilidad AJE</h3><canvas id="com-status-aje"></canvas></div>
+            <div class="card"><h3>Distribución por Compañía</h3><canvas id="com-donut"></canvas></div>
+            <div class="card"><h3>Resumen Ejecutivo</h3><div id="com-resumen"></div></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const FMT = new Intl.NumberFormat('es-PE',{style:'currency',currency:'PEN',minimumFractionDigits:0});
+    document.getElementById('fecha-actual').textContent = new Date().toLocaleDateString('es-PE',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    function $(id){return document.getElementById(id);}
+    let charts = {}, tabActual = 'operativo', pagina = 1, limite = 50;
+    Chart.register(ChartDataLabels);
+    const dlab = { color:'#444', font:{size:9,weight:'bold'}, formatter:(v,ctx)=>{let s=ctx.dataset.data.reduce((a,b)=>a+b,0);return s?(v/s*100).toFixed(1)+'%':''} };
+    const noDL = { display:false };
+
+    function switchTab(tab) {
+        tabActual = tab;
+        document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.textContent.trim().toLowerCase().includes(tab)));
+        document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id.includes(tab)));
+        Object.keys(charts).forEach(k => {if(charts[k]){try{charts[k].destroy();}catch(e){}delete charts[k];}});
+        if (tab === 'operativo') cargarOperativo();
+        else cargarComercial();
+    }
+
+    function params() {
+        const p = new URLSearchParams();
+        [['compania','f-compania'],['estado_contable','f-ec'],['estado_flete','f-ef'],['estado_flt','f-flt'],['status_crisar','f-sc'],['tipo_fact','f-tf'],['status_cont_aje','f-scaje'],['estado_envio_factura','f-env-fact'],['aprobacion','f-aprob'],['mes_desde','f-mes-d'],['mes_hasta','f-mes-h']].forEach(([k,el]) => {
+            const v = $(el).value; if (v) p.set(k, v);
+        });
+        return p.toString();
+    }
+
+    function limpiar() { document.querySelectorAll('.filtros select').forEach(s=>s.value=''); aplicar(); }
+    function aplicar() {
+        pagina = 1;
+        Object.keys(charts).forEach(k => {if(charts[k]){try{charts[k].destroy();}catch(e){}delete charts[k];}});
+        $('op-tabla').innerHTML = '<div style="text-align:center;padding:24px;color:#5a6a7e">Cargando...</div>';
+        if (tabActual === 'operativo') cargarOperativo(); else cargarComercial();
+    }
+    function cambiarPag(delta) {
+        pagina = Math.max(1, pagina + delta);
+        $('op-tabla').innerHTML = '<div style="text-align:center;padding:24px;color:#5a6a7e">Cargando...</div>';
+        cargarTablaOperativo();
+    }
+    function exportarExcel() {
+        const suf = params()?'?'+params():'';
+        window.open('/api/fact/exportar_excel'+suf, '_blank');
+    }
+
+    async function cargarFiltros() {
+        const d = await fetch('/api/fact/filtros').then(r=>r.json());
+        [['companias','f-compania'],['estados_contables','f-ec'],['estados_flete','f-ef'],['estados_flt','f-flt'],['status_crisar','f-sc'],['tipos_fact','f-tf'],['status_cont_aje','f-scaje'],['estados_envio_factura','f-env-fact'],['aprobaciones','f-aprob']].forEach(([k,el]) => (d[k]||[]).forEach(v => $(el).appendChild(new Option(v,v))));
+        (d.meses||[]).forEach(v => {$('f-mes-d').appendChild(new Option(v,v));$('f-mes-h').appendChild(new Option(v,v));});
+    }
+
+    async function cargarOperativo() {
+        const suf = params()?'?'+params():'';
+        const k = (await fetch('/api/fact/kpi'+suf).then(r=>r.json()))[0];
+        const pctFact = k.tarifa_total ? ((k.facturado_total/k.tarifa_total)*100).toFixed(1) : 0;
+        const pctCob = k.tarifa_total ? ((k.cobrado_total/k.tarifa_total)*100).toFixed(1) : 0;
+        $('badge-status').textContent = `S/${FMT.format(k.tarifa_total)} · ${pctFact}% facturado · ${pctCob}% cobrado`;
+
+        $('kpi-op').innerHTML = [
+            {l:'Total Viajes', v:k.total_viajes.toLocaleString(), c:'blu'},
+            {l:'Total S/', v:FMT.format(k.tarifa_total), c:'cyn'},
+            {l:'Facturado', v:`${k.pct_facturado||0}%`, s:`${FMT.format(k.facturado_total)} · ${k.facturados} viajes`, c:'grn'},
+            {l:'Sin Facturar', v:`${k.pct_sin_facturar||0}%`, s:`${FMT.format(k.sin_facturar_total)} · ${k.sin_facturar} viajes`, c:'red'},
+            {l:'Anulado', v:`${k.pct_anulado||0}%`, s:`${FMT.format(k.anulado_total)} · ${k.anulados} viajes`, c:'orn'},
+            {l:'Cobrado (Crisar)', v:FMT.format(k.cobrado_total), s:`${k.cobrados} viajes · ${pctCob}%`, c:'grn'},
+            {l:'Con FLT', v:k.con_flt.toLocaleString(), s:`${k.confirmados} confirmados`, c:'prp'},
+            {l:'Por Confirmar', v:k.por_confirmar.toLocaleString(), s:`${k.companias} comp.`, c:'red'},
+        ].map(i => `<div class="kpi ${i.c}"><div class="lbl">${i.l}</div><div class="val">${i.v}</div>${i.s?`<div class="sub">${i.s}</div>`:''}</div>`).join('');
+
+        const estados = await fetch('/api/fact/estados'+suf).then(r=>r.json());
+
+        const contable = estados.filter(e=>e.grupo==='Contable');
+        if(contable.length) charts['op-contable']=new Chart($('op-contable'),{type:'doughnut',data:{labels:contable.map(e=>e.nombre),datasets:[{data:contable.map(e=>e.total),backgroundColor:['#00e676','#ff5252','#ffab40'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{datalabels:dlab,legend:{position:'bottom',labels:{color:'#8892b0',font:{size:9}}}}}});
+
+        const flt = estados.filter(e=>e.grupo==='FLT');
+        if(flt.length) charts['op-flt']=new Chart($('op-flt'),{type:'doughnut',data:{labels:flt.map(e=>e.nombre),datasets:[{data:flt.map(e=>e.total),backgroundColor:['#64ffda','#ff5252'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{datalabels:dlab,legend:{position:'bottom',labels:{color:'#8892b0',font:{size:9}}}}}});
+
+        const sc = await fetch('/api/fact/status_crisar'+suf).then(r=>r.json());
+        if(sc.length) charts['op-crisar']=new Chart($('op-crisar'),{type:'doughnut',data:{labels:sc.map(s=>s.status_crisar),datasets:[{data:sc.map(s=>s.total),backgroundColor:['#00e676','#4fc3f7','#ffab40','#ff5252','#b388ff','#f48fb1'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{datalabels:dlab,legend:{position:'bottom',labels:{color:'#8892b0',font:{size:9}}}}}});
+
+        const env = await fetch('/api/fact/envio_factura'+suf).then(r=>r.json());
+        if(env.length){const mx=Math.max(...env.map(e=>e.total));$('op-envio').innerHTML=env.map(e=>`<div class="bi"><span class="bn"><span class="tag ${e.estado_envio_factura==='ACEPTADO'?'tag-acp':e.estado_envio_factura==='PENDIENTE'?'tag-pen':e.estado_envio_factura==='Anulado'?'tag-anl':'tag-man'}">${e.estado_envio_factura}</span></span><div class="bt"><div class="bf" style="width:${(e.total/mx*100).toFixed(0)}%;background:${e.estado_envio_factura==='ACEPTADO'?'#00e676':e.estado_envio_factura==='PENDIENTE'?'#ffab40':e.estado_envio_factura==='Anulado'?'#ff5252':'#4fc3f7'}"></div></div><span class="bl">${FMT.format(e.total)}</span></div>`).join('');}
+
+        const fletes = estados.filter(e=>e.grupo==='Flete');
+        if(fletes.length) charts['op-flete']=new Chart($('op-flete'),{type:'doughnut',data:{labels:fletes.map(f=>f.nombre),datasets:[{data:fletes.map(f=>f.total),backgroundColor:['#4fc3f7','#ffab40'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{datalabels:dlab,legend:{position:'bottom',labels:{color:'#8892b0',font:{size:9}}}}}});
+
+        const tf = await fetch('/api/fact/tipo_fact'+suf).then(r=>r.json());
+        if(tf.length) charts['op-tipo-fact']=new Chart($('op-tipo-fact'),{type:'doughnut',data:{labels:tf.map(t=>t.tipo_fact||'N/A'),datasets:[{data:tf.map(t=>t.total),backgroundColor:['#4fc3f7','#ffd740','#f48fb1','#b388ff'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{datalabels:dlab,legend:{position:'bottom',labels:{color:'#8892b0',font:{size:9}}}}}});
+
+        const aprob = await fetch('/api/fact/aprobacion'+suf).then(r=>r.json());
+        if(aprob.length) charts['op-aprob']=new Chart($('op-aprob'),{type:'doughnut',data:{labels:aprob.map(a=>a.aprobacion||'N/A'),datasets:[{data:aprob.map(a=>a.total),backgroundColor:['#00e676','#4fc3f7','#ffab40'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{datalabels:dlab,legend:{position:'bottom',labels:{color:'#8892b0',font:{size:9}}}}}});
+
+        const conc = estados.filter(e=>e.grupo==='Conciliacion');
+        if(conc.length) charts['op-conciliacion']=new Chart($('op-conciliacion'),{type:'doughnut',data:{labels:conc.map(c=>c.nombre),datasets:[{data:conc.map(c=>c.total),backgroundColor:['#00e676','#4fc3f7','#ffab40','#ff5252','#b388ff','#64ffda'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{datalabels:dlab,legend:{position:'bottom',labels:{color:'#8892b0',font:{size:9}}}}}});
+
+        const pt = await fetch('/api/fact/pendientes_top'+suf).then(r=>r.json());
+        if(pt.length){const mx=Math.max(...pt.map(p=>p.total));$('op-pendientes').innerHTML=pt.map(p=>`<div class="bi"><span class="bn" style="min-width:120px">${(p.nombre_sucursal||'').substring(0,16)}</span><div class="bt"><div class="bf" style="width:${(p.total/mx*100).toFixed(0)}%;background:#ff5252"></div></div><span class="bl">${FMT.format(p.total)}</span></div>`).join('');}
+
+        await cargarTablaOperativo();
+    }
+
+    async function cargarTablaOperativo() {
+        const suf = params()?'?'+params():'';
+        const tb=await fetch(`/api/fact/tabla${suf}${suf?'&':'?'}pagina=${pagina}&limite=${limite}`).then(r=>r.json());
+        const ct=$('op-tabla');if(!tb.length){ct.innerHTML='<div style="text-align:center;padding:24px;color:#5a6a7e">Sin datos</div>';$('pg-info').textContent='Pág. 1';$('op-tabla-info').textContent='';return;}
+        $('pg-info').textContent=`Pág. ${pagina}`;
+        $('op-tabla-info').textContent=`${tb.length} registros`;
+        let h='<table><thead><tr><th>Fecha</th><th>Compañía</th><th>Sucursal</th><th>ID Envío</th><th>Título</th><th>Obs.</th><th class="r">Tarifa</th><th>N° Flete</th><th>Contable</th><th>FLT</th><th>Crisar</th></tr></thead><tbody>';
+        tb.forEach(r=>{
+            h+=`<tr><td>${r.fecha||'-'}</td><td>${(r.nombre_compania||'').substring(0,14)}</td><td>${(r.nombre_sucursal||'').substring(0,12)}</td>
+            <td style="font-size:10px">${r.id_envio||'-'}</td>
+            <td style="font-size:10px;max-width:100px;overflow:hidden;text-overflow:ellipsis">${(r.titulo||'').substring(0,20)}</td>
+            <td style="font-size:10px;max-width:80px;overflow:hidden;text-overflow:ellipsis">${(r.observacion||'').substring(0,15)}</td>
+            <td class="r mono">${FMT.format(r.tarifa_final)}</td>
+            <td style="font-size:10px">${r.n_flete||'-'}</td>
+            <td>${r.estado_contable==='Facturado'?'<span class="tag tag-acp">Fact</span>':r.estado_contable==='Anulado'?'<span class="tag tag-anl">Anul</span>':'<span class="tag tag-pen">Pend</span>'}</td>
+            <td>${r.estado_flt==='Con FLT'?'<span class="tag tag-flt">Con FLT</span>':'<span class="tag tag-nflt">Sin FLT</span>'}</td>
+            <td>${r.status_crisar?`<span class="tag ${r.status_crisar==='COBRADO'?'tag-cbr':'tag-pen'}">${r.status_crisar||'-'}</span>`:'-'}</td></tr>`;
+        });h+='</tbody></table>';ct.innerHTML=h;
+    }
+
+    async function cargarComercial() {
+        const suf = params()?'?'+params():'';
+
+        const re = (await fetch('/api/fact/resumen_ejecutivo'+suf).then(r=>r.json()))[0];
+        const pctF = re.pct_facturado||0;
+        const pctC = re.pct_cobrado||0;
+        const pctSF = re.pct_sin_facturar||0;
+        const pctA = re.pct_anulado||0;
+        $('badge-status').textContent = `S/${FMT.format(re.total_tarifa)} · ${pctF}% facturado · ${pctC}% cobrado`;
+        $('kpi-com').innerHTML = [
+            {l:'Total S/', v:FMT.format(re.total_tarifa), c:'cyn'},
+            {l:'Facturado', v:`${pctF}%`, s:`${FMT.format(re.fact_total)} · ${re.fact_viajes} viajes`, c:'grn'},
+            {l:'Sin Facturar', v:`${pctSF}%`, s:`${FMT.format(re.pend_total)} · ${re.pend_viajes} viajes`, c:'red'},
+            {l:'Anulado', v:`${pctA}%`, s:`${FMT.format(re.anul_total)} · ${re.anul_viajes} viajes`, c:'orn'},
+            {l:'Cobrado Crisar', v:FMT.format(re.cob_total), s:`${pctC}% · ${re.cob_viajes} viajes`, c:'grn'},
+            {l:'Con FLT', v:re.con_flt.toLocaleString(), s:`${re.sin_flt} sin FLT`, c:'prp'},
+            {l:'Confirmados', v:re.conf_viajes.toLocaleString(), s:`${re.por_confirmar} por confirmar`, c:'blu'},
+            {l:'Por Confirmar', v:re.por_confirmar.toLocaleString(), s:`${re.companias} comp.`, c:'red'},
+        ].map(i => `<div class="kpi ${i.c}"><div class="lbl">${i.l}</div><div class="val">${i.v}</div>${i.s?`<div class="sub">${i.s}</div>`:''}</div>`).join('');
+
+
+        const tm = await fetch('/api/fact/tendencia_mensual'+suf).then(r=>r.json());
+        if(tm.length){
+            const ult=tm[tm.length-1];
+            $('com-pct').innerHTML=(ult.pct_fact!=null?`<div class="b ${ult.pct_fact>=80?'grn':ult.pct_fact>=50?'orn':'red'}">${ult.pct_fact}%</div>`:'')+`<div class="s">${ult.mes} · fact. ${FMT.format(ult.facturado)} · cob. ${FMT.format(ult.cobrado)}</div>`;
+            charts['com-tendencia']=new Chart($('com-tendencia'),{type:'line',data:{labels:tm.map(m=>m.mes),datasets:[
+                {label:'Total',data:tm.map(m=>m.total),borderColor:'#4fc3f7',backgroundColor:'rgba(79,195,247,.05)',fill:true,tension:.3},
+                {label:'Facturado',data:tm.map(m=>m.facturado),borderColor:'#00e676',backgroundColor:'rgba(0,230,118,.08)',fill:true,tension:.3},
+                {label:'Cobrado',data:tm.map(m=>m.cobrado),borderColor:'#b388ff',backgroundColor:'rgba(179,136,255,.08)',fill:true,tension:.3},
+            ]},options:{responsive:true,maintainAspectRatio:false,plugins:{datalabels:noDL,legend:{labels:{color:'#8892b0',font:{size:10}}}},scales:{x:{grid:{display:false},ticks:{color:'#8892b0'}},y:{beginAtZero:true,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#5a6a7e',callback:v=>'S/'+(v/1e6).toFixed(1)+'M'}}}}});
+        }
+
+        const rc = await fetch('/api/fact/ranking_compania'+suf).then(r=>r.json());
+        if(rc.length){
+            charts['com-ranking']=new Chart($('com-ranking'),{type:'bar',data:{labels:rc.map(c=>c.nombre_compania.substring(0,22)).reverse(),datasets:[
+                {label:'Cobrado',data:rc.map(c=>c.cobrado).reverse(),backgroundColor:'rgba(179,136,255,.7)',borderRadius:3},
+                {label:'Facturado (no cobrado)',data:rc.map(c=>c.facturado-c.cobrado).reverse(),backgroundColor:'rgba(0,230,118,.6)',borderRadius:3},
+                {label:'Pendiente',data:rc.map(c=>c.pendiente).reverse(),backgroundColor:'rgba(255,82,82,.5)',borderRadius:3},
+                {label:'Anulado',data:rc.map(c=>c.anulado).reverse(),backgroundColor:'rgba(255,171,64,.5)',borderRadius:3},
+            ]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{datalabels:noDL,legend:{labels:{color:'#8892b0',font:{size:8}}}},scales:{x:{beginAtZero:true,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#5a6a7e',callback:v=>'S/'+(v/1e6).toFixed(1)+'M'}},y:{grid:{display:false},ticks:{color:'#8892b0',font:{size:9}}}}}});
+
+            charts['com-donut']=new Chart($('com-donut'),{type:'doughnut',data:{labels:rc.map(c=>c.nombre_compania.substring(0,20)),datasets:[{data:rc.map(c=>c.total),backgroundColor:['#00e676','#2979ff','#ffab40','#b388ff','#ff5252','#64ffda','#f48fb1','#ffd740'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{datalabels:dlab,legend:{position:'right',labels:{color:'#8892b0',font:{size:9}}}}}});
+        }
+
+        const scAje = await fetch('/api/fact/status_cont_aje'+suf).then(r=>r.json());
+        if(scAje.length) charts['com-status-aje']=new Chart($('com-status-aje'),{type:'doughnut',data:{labels:scAje.map(a=>a.status_contabilidad_aje||'N/A'),datasets:[{data:scAje.map(a=>a.total),backgroundColor:['#00e676','#4fc3f7','#ffab40','#ff5252','#b388ff','#64ffda','#f48fb1'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{datalabels:dlab,legend:{position:'bottom',labels:{color:'#8892b0',font:{size:8}}}}}});
+
+        $('com-resumen').innerHTML=`
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div class="mini-card"><div class="mc-lbl">Total Facturado</div><div class="mc-val grn">${FMT.format(re.fact_total)}</div><div class="mc-sub">${re.fact_viajes} viajes · ${pctF}%</div></div>
+                <div class="mini-card"><div class="mc-lbl">Por Facturar</div><div class="mc-val" style="color:#ff5252">${FMT.format(re.pend_total)}</div><div class="mc-sub">${re.pend_viajes} viajes</div></div>
+                <div class="mini-card"><div class="mc-lbl">Cobrado Crisar</div><div class="mc-val grn">${FMT.format(re.cob_total)}</div><div class="mc-sub">${pctC}% del total</div></div>
+                <div class="mini-card"><div class="mc-lbl">Por Cobrar</div><div class="mc-val" style="color:#ffab40">${FMT.format(re.total_tarifa-re.cob_total)}</div><div class="mc-sub">${(100-pctC).toFixed(1)}% pendiente</div></div>
+                <div class="mini-card"><div class="mc-lbl">Tarifa Promedio</div><div class="mc-val blu">${FMT.format(re.tarifa_prom)}</div><div class="mc-sub">por viaje</div></div>
+                <div class="mini-card"><div class="mc-lbl">Env. Aceptados</div><div class="mc-val" style="color:#4fc3f7">${re.env_aceptados}</div><div class="mc-sub">envíos de factura</div></div>
+            </div>
+        `;
+    }
+
+    cargarFiltros();
+    cargarOperativo();
+</script>
+</body>
+</html>

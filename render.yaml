@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: facturacion-web
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn wsgi:application --bind 0.0.0.0:$PORT
+    envVars:
+      - key: GOOGLE_APPLICATION_CREDENTIALS
+        value: /etc/secrets/Conexion_BigQuery.json
